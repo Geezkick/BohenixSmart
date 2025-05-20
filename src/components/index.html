@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bohenix Solutions | AI-Powered Smart Road Infrastructure</title>
+  <meta name="description" content="Revolutionizing African transportation with AI-driven smart road infrastructure by Bohenix Solutions">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚦</text></svg>">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#FF6B35',
+            secondary: '#6C46EA',
+            metallic: {
+              100: 'rgba(255, 255, 255, 0.1)',
+              200: 'rgba(255, 255, 255, 0.2)',
+            },
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Mapbox GL -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <!-- Three.js -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.min.js"></script>
+  <!-- React -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --secondary: #6C46EA;
+    }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #111827;
+      color: white;
+      overflow-x: hidden;
+    }
+    #root {
+      min-height: 100vh;
+    }
+    .mapboxgl-ctrl-logo { display: none !important; }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes spin-reverse {
+      to { transform: rotate(-360deg); }
+    }
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+    .animate-spin-reverse {
+      animation: spin-reverse 1s linear infinite;
+    }
+    .floating {
+      animation: floating 6s ease-in-out infinite;
+    }
+    @keyframes floating {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-20px); }
+    }
+    .particle {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .gradient-text {
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .glass-effect {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .nav-link {
+      position: relative;
+    }
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      transition: width 0.3s ease;
+    }
+    .nav-link:hover::after {
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // ======================
+    // 1. Particle Background
+    // ======================
+    function useParticles() {
+      useEffect(() => {
+        const particles = [];
+        const colors = ['#FF6B35', '#6C46EA', '#FFFFFF'];
+        
+        function createParticle() {
+          const particle = document.createElement('div');
+          particle.className = 'particle';
+          
+          const size = Math.random() * 5 + 2;
+          const color = colors[Math.floor(Math.random() * colors.length)];
+          
+          particle.style.width = `${size}px`;
+          particle.style.height = `${size}px`;
+          particle.style.background = color;
+          particle.style.opacity = Math.random() * 0.5 + 0.1;
+          
+          particle.style.left = `${Math.random() * window.innerWidth}px`;
+          particle.style.top = `${Math.random() * window.innerHeight}px`;
+          
+          document.body.appendChild(particle);
+          
+          const duration = Math.random() * 20 + 10;
+          particle.style.animation = `float ${duration}s linear infinite`;
+          
+          particles.push({
+            element: particle,
+            x: parseFloat(particle.style.left),
+            y: parseFloat(particle.style.top),
+            speedX: Math.random() * 0.2 - 0.1,
+            speedY: Math.random() * 0.2 - 0.1,
+          });
+        }
+        
+        // Create initial particles
+        for (let i = 0; i < 50; i++) {
+          createParticle();
+        }
+        
+        // Animation loop
+        let animationId;
+        function animateParticles() {
+          particles.forEach(particle => {
+            particle.x += particle.speedX;
+            particle.y += particle.speedY;
+            
+            // Wrap around screen edges
+            if (particle.x > window.innerWidth) particle.x = 0;
+            if (particle.x < 0) particle.x = window.innerWidth;
+            if (particle.y > window.innerHeight) particle.y = 0;
+            if (particle.y < 0) particle.y = window.innerHeight;
+            
+            particle.element.style.left = `${particle.x}px`;
+            particle.element.style.top = `${particle.y}px`;
+          });
+          
+          animationId = requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+        
+        return () => {
+          cancelAnimationFrame(animationId);
+          particles.forEach(p => p.element.remove());
+        };
+      }, []);
+    }
+
+    // ======================
+    // 2. Navigation Component
+    // ======================
+    function Navigation() {
+      const [scrolled, setScrolled] = useState(false);
+      const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+      useEffect(() => {
+        const handleScroll = () => {
+          setScrolled(window.scrollY > 10);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+      }, []);
+
+      return (
+        <nav className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'py-2 bg-gray-900/90 glass-effect' : 'py-4 bg-transparent'}`}>
+          <div className="container mx-auto px-4 flex justify-between items-center">
+            <div className="flex items-center">
+              <span className="text-2xl font-bold gradient-text">Bohenix</span>
+            </div>
+            
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-8">
+              <a href="#home" className="nav-link text-white font-medium">Home</a>
+              <a href="#technology" className="nav-link text-white font-medium">Technology</a>
+              <a href="#solutions" className="nav-link text-white font-medium">Solutions</a>
+              <a href="#contact" className="nav-link text-white font-medium">Contact</a>
+              <button className="bg-gradient-to-r from-primary to-secondary text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg transition-all">
+                Get Demo
+              </button>
+            </div>
+            
+            {/* Mobile Menu Button */}
+            <button 
+              className="md:hidden text-white focus:outline-none"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {mobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+          </div>
+          
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="md:hidden bg-gray-900/95 glass-effect">
+              <div className="container mx-auto px-4 py-4 flex flex-col space-y-4">
+                <a href="#home" className="text-white font-medium" onClick={() => setMobileMenuOpen(false)}>Home</a>
+                <a href="#technology" className="text-white font-medium" onClick={() => setMobileMenuOpen(false)}>Technology</a>
+                <a href="#solutions" className="text-white font-medium" onClick={() => setMobileMenuOpen(false)}>Solutions</a>
+                <a href="#contact" className="text-white font-medium" onClick={() => setMobileMenuOpen(false)}>Contact</a>
+                <button className="bg-gradient-to-r from-primary to-secondary text-white px-6 py-2 rounded-full font-semibold mt-2">
+                  Get Demo
+                </button>
+              </div>
+            </div>
+          )}
+        </nav>
+      );
+    }
+
+    // ======================
+    // 3. Hero Section with Enhanced Three.js Sphere
+    // ======================
+    function HeroSection() {
+      const mountRef = useRef(null);
+      const [loading, setLoading] = useState(true);
+      const [hovered, setHovered] = useState(false);
+
+      useEffect(() => {
+        // Three.js Scene Setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ 
+          antialias: true, 
+          alpha: true,
+          powerPreference: "high-performance"
+        });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        mountRef.current.appendChild(renderer.domElement);
+
+        // Enhanced Metallic Sphere
+        const geometry = new THREE.SphereGeometry(1, 64, 64);
+        const material = new THREE.MeshPhysicalMaterial({ 
+          color: 0xFF6B35,
+          metalness: 0.9,
+          roughness: 0.1,
+          clearcoat: 1,
+          clearcoatRoughness: 0.1,
+          transmission: 0.2,
+          ior: 1.5,
+          envMapIntensity: 1
+        });
+        
+        const sphere = new THREE.Mesh(geometry, material);
+        scene.add(sphere);
+
+        // Add inner glowing core
+        const innerGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const innerMaterial = new THREE.MeshBasicMaterial({
+          color: 0x6C46EA,
+          transparent: true,
+          opacity: 0.8
+        });
+        const innerSphere = new THREE.Mesh(innerGeometry, innerMaterial);
+        sphere.add(innerSphere);
+
+        // Add floating particles around sphere
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCnt = 200;
+        const posArray = new Float32Array(particlesCnt * 3);
+        
+        for(let i = 0; i < particlesCnt * 3; i++) {
+          posArray[i] = (Math.random() - 0.5) * 5;
+        }
+        
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMaterial = new THREE.PointsMaterial({
+          size: 0.02,
+          color: 0xFFFFFF,
+          transparent: true,
+          opacity: 0.8
+        });
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+
+        // Enhanced Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        
+        const pointLight1 = new THREE.PointLight(0xFF6B35, 1, 10);
+        pointLight1.position.set(2, 3, 4);
+        scene.add(pointLight1);
+        
+        const pointLight2 = new THREE.PointLight(0x6C46EA, 1, 10);
+        pointLight2.position.set(-2, -3, -4);
+        scene.add(pointLight2);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(1, 1, 1);
+        scene.add(directionalLight);
+
+        // Camera Position
+        camera.position.z = 3;
+
+        // Controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableZoom = false;
+        controls.enablePan = false;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = hovered ? 0.5 : 1.5;
+
+        // Animation Loop
+        let frameId;
+        const animate = () => {
+          frameId = requestAnimationFrame(animate);
+          
+          sphere.rotation.y += 0.002;
+          innerSphere.rotation.y -= 0.003;
+          particlesMesh.rotation.x += 0.001;
+          particlesMesh.rotation.y -= 0.002;
+          
+          controls.update();
+          renderer.render(scene, camera);
+        };
+        animate();
+
+        // Handle Resize
+        const handleResize = () => {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+        window.addEventListener('resize', handleResize);
+
+        setLoading(false);
+
+        return () => {
+          cancelAnimationFrame(frameId);
+          window.removeEventListener('resize', handleResize);
+          mountRef.current?.removeChild(renderer.domElement);
+        };
+      }, [hovered]);
+
+      return (
+        <section 
+          id="home"
+          className="relative h-screen overflow-hidden"
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+        >
+          <div ref={mountRef} className="absolute inset-0" />
+          {loading ? (
+            <div className="flex justify-center items-center h-full">
+              <div className="relative w-16 h-16">
+                <div className="absolute inset-0 border-4 border-t-transparent border-primary rounded-full animate-spin" />
+                <div className="absolute inset-0 border-4 border-b-transparent border-secondary rounded-full animate-spin-reverse" />
+              </div>
+            </div>
+          ) : (
+            <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-4">
+              <h1 className="text-5xl md:text-6xl font-bold gradient-text mb-6">
+                Intelligent Road Networks
+              </h1>
+              <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-2xl">
+                AI-powered infrastructure reducing accidents by 40% and improving traffic flow across Africa
+              </p>
+              <div className="flex gap-4 flex-wrap justify-center">
+                <button 
+                  className="bg-gradient-to-r from-primary to-secondary text-white px-8 py-3 rounded-full font-semibold hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+                  onClick={() => alert('Our solutions team will contact you shortly')}
+                >
+                  City Solutions
+                </button>
+                <button 
+                  className="bg-transparent border-2 border-secondary text-white px-8 py-3 rounded-full font-semibold hover:bg-secondary/20 transition-all hover:scale-105 active:scale-95"
+                  onClick={() => window.scrollTo({ top: document.getElementById('technology').offsetTop, behavior: 'smooth' })}
+                >
+                  See Technology
+                </button>
+              </div>
+              
+              <div className="mt-12 grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8 text-center w-full max-w-4xl px-4">
+                <div className="glass-effect p-4 rounded-xl">
+                  <div className="text-3xl font-bold text-primary">40%</div>
+                  <div className="text-gray-300">Fewer accidents</div>
+                </div>
+                <div className="glass-effect p-4 rounded-xl">
+                  <div className="text-3xl font-bold text-secondary">30%</div>
+                  <div className="text-gray-300">Traffic reduction</div>
+                </div>
+                <div className="glass-effect p-4 rounded-xl col-span-2 md:col-span-1">
+                  <div className="text-3xl font-bold text-purple-400">24/7</div>
+                  <div className="text-gray-300">AI monitoring</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      );
+    }
+
+    // ======================
+    // 4. Technology Showcase
+    // ======================
+    function TechnologyShowcase() {
+      const technologies = [
+        {
+          title: "AI Traffic Prediction",
+          description: "Our neural networks analyze patterns to predict and prevent congestion before it happens.",
+          icon: "🤖"
+        },
+        {
+          title: "Smart Intersections",
+          description: "IoT-enabled traffic lights that communicate with vehicles and adapt in real-time.",
+          icon: "🚦"
+        },
+        {
+          title: "Emergency Priority",
+          description: "Automated routes for emergency vehicles, reducing response times by up to 30%.",
+          icon: "🚑"
+        },
+        {
+          title: "V2X Communication",
+          description: "Vehicle-to-everything technology for seamless integration with all road users.",
+          icon: "📡"
+        }
+      ];
+
+      return (
+        <section id="technology" className="py-20 bg-gray-900/50">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold gradient-text inline-block">
+                Our Cutting-Edge Technology
+              </h2>
+              <p className="text-xl text-gray-300 mt-4 max-w-3xl mx-auto">
+                Combining AI, IoT, and advanced analytics to create safer, smarter roads
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {technologies.map((tech, index) => (
+                <div 
+                  key={index}
+                  className="glass-effect p-6 rounded-xl hover:transform hover:scale-105 transition-all duration-300"
+                >
+                  <div className="text-4xl mb-4">{tech.icon}</div>
+                  <h3 className="text-xl font-bold text-white mb-2">{tech.title}</h3>
+                  <p className="text-gray-300">{tech.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ======================
+    // 5. Live Map Component
+    // ======================
+    function LiveMap() {
+      const mapContainer = useRef(null);
+      const [map, setMap] = useState(null);
+      const [trafficLayer, setTrafficLayer] = useState(null);
+      const [showTraffic, setShowTraffic] = useState(true);
+      const [showIncidents, setShowIncidents] = useState(false);
+      const [incidents, setIncidents] = useState([
+        { id: 1, type: 'accident', location: [36.8219, -1.2921], severity: 'high' },
+        { id: 2, type: 'congestion', location: [36.8180, -1.3000], severity: 'medium' },
+        { id: 3, type: 'roadwork', location: [36.8250, -1.2850], severity: 'low' }
+      ]);
+
+      useEffect(() => {
+        if (!mapContainer.current || map) return;
+        
+        mapboxgl.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
+        
+        const map = new mapboxgl.Map({
+          container: mapContainer.current,
+          style: 'mapbox://styles/mapbox/dark-v11',
+          center: [36.8219, -1.2921], // Nairobi
+          zoom: 12
+        });
+
+        map.on('load', () => {
+          // Add traffic layer
+          map.addSource('traffic', {
+            type: 'vector',
+            url: 'mapbox://mapbox.mapbox-traffic-v1'
+          });
+          
+          map.addLayer({
+            id: 'traffic-layer',
+            type: 'line',
+            source: 'traffic',
+            'source-layer': 'traffic',
+            paint: {
+              'line-color': [
+                'case',
+                ['==', ['get', 'congestion'], 'low'],
+                '#4CAF50',
+                ['==', ['get', 'congestion'], 'moderate'],
+                '#FFC107',
+                '#FF5252'
+              ],
+              'line-width': 4
+            }
+          });
+          setTrafficLayer('traffic-layer');
+
+          // Add incidents source
+          map.addSource('incidents', {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: incidents.map(incident => ({
+                type: 'Feature',
+                geometry: {
+                  type: 'Point',
+                  coordinates: incident.location
+                },
+                properties: {
+                  id: incident.id,
+                  type: incident.type,
+                  severity: incident.severity
+                }
+              }))
+            }
+          });
+
+          // Add incidents layer
+          map.addLayer({
+            id: 'incidents-layer',
+            type: 'circle',
+            source: 'incidents',
+            paint: {
+              'circle-radius': [
+                'match',
+                ['get', 'severity'],
+                'high', 10,
+                'medium', 8,
+                'low', 6,
+                6
+              ],
+              'circle-color': [
+                'match',
+                ['get', 'severity'],
+                'high', '#FF5252',
+                'medium', '#FFC107',
+                'low', '#4CAF50',
+                '#FFFFFF'
+              ],
+              'circle-opacity': 0.8,
+              'circle-stroke-width': 2,
+              'circle-stroke-color': '#FFFFFF'
+            }
+          });
+          map.setLayoutProperty('incidents-layer', 'visibility', 'none');
+        });
+
+        setMap(map);
+
+        return () => {
+          if (map) map.remove();
+        };
+      }, []);
+
+      const toggleTraffic = () => {
+        if (map && trafficLayer) {
+          const visibility = map.getLayoutProperty(trafficLayer, 'visibility');
+          if (visibility === 'visible') {
+            map.setLayoutProperty(trafficLayer, 'visibility', 'none');
+            setShowTraffic(false);
+          } else {
+            map.setLayoutProperty(trafficLayer, 'visibility', 'visible');
+            setShowTraffic(true);
+          }
+        }
+      };
+
+      const toggleIncidents = () => {
+        if (map) {
+          const visibility = map.getLayoutProperty('incidents-layer', 'visibility');
+          if (visibility === 'visible') {
+            map.setLayoutProperty('incidents-layer', 'visibility', 'none');
+            setShowIncidents(false);
+          } else {
+            map.setLayoutProperty('incidents-layer', 'visibility', 'visible');
+            setShowIncidents(true);
+          }
+        }
+      };
+
+      return (
+        <section id="solutions" className="py-20">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold gradient-text inline-block">
+                Real-Time Traffic Intelligence
+              </h2>
+              <p className="text-xl text-gray-300 mt-4 max-w-3xl mx-auto">
+                Our AI systems analyze thousands of data points to optimize traffic flow and prevent accidents
+              </p>
+            </div>
+            
+            <div className="rounded-xl overflow-hidden border border-metallic-200 h-[600px] relative">
+              <div ref={mapContainer} className="w-full h-full" />
+              
+              {/* Map Controls */}
+              <div className="absolute top-4 right-4 bg-gray-900/90 p-4 rounded-lg shadow-lg border border-metallic-100 flex flex-col gap-2 glass-effect">
+                <h4 className="text-white font-semibold mb-2">Map Controls</h4>
+                
+                <button 
+                  onClick={toggleTraffic}
+                  className={`px-4 py-2 rounded-lg font-medium text-left ${showTraffic ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-700 hover:bg-gray-600'} transition-colors`}
+                >
+                  {showTraffic ? '✓ Traffic Data' : 'Show Traffic'}
+                </button>
+                
+                <button 
+                  onClick={toggleIncidents}
+                  className={`px-4 py-2 rounded-lg font-medium text-left ${showIncidents ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'} transition-colors`}
+                >
+                  {showIncidents ? '✓ Incident Data' : 'Show Incidents'}
+                </button>
+                
+                <div className="mt-4 pt-4 border-t border-gray-700">
+                  <h4 className="text-white font-semibold mb-2">Legend</h4>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-4 h-4 bg-[#4CAF50] rounded-sm" />
+                    <span className="text-gray-300">Low Traffic</span>
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-4 h-4 bg-[#FFC107] rounded-sm" />
+                    <span className="text-gray-300">Moderate</span>
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-4 h-4 bg-[#FF5252] rounded-sm" />
+                    <span className="text-gray-300">High Traffic</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-3">
+                    <div className="w-4 h-4 bg-[#FF5252] rounded-full border-2 border-white" />
+                    <span className="text-gray-300">Incident</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Data Panel */}
+              <div className="absolute bottom-4 left-4 right-4 bg-gray-900/90 p-4 rounded-lg shadow-lg border border-metallic-100 glass-effect">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-3 rounded-lg bg-gray-800/50">
+                    <div className="text-sm text-gray-400">Current Speed</div>
+                    <div className="text-2xl font-bold text-primary">42 km/h</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-gray-800/50">
+                    <div className="text-sm text-gray-400">Incidents Detected</div>
+                    <div className="text-2xl font-bold text-secondary">3</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-gray-800/50">
+                    <div className="text-sm text-gray-400">System Status</div>
+                    <div className="text-2xl font-bold text-green-500">Active</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ======================
+    // 6. Contact Section
+    // ======================
+    function ContactSection() {
+      const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        message: ''
+      });
+      const [submitted, setSubmitted] = useState(false);
+
+      const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+          ...prev,
+          [name]: value
+        }));
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        // Here you would typically send the data to your backend
+        console.log('Form submitted:', formData);
+        setSubmitted(true);
+        setFormData({ name: '', email: '', message: '' });
+        setTimeout(() => setSubmitted(false), 3000);
+      };
+
+      return (
+        <section id="contact" className="py-20 bg-gray-900/50">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center mb-12">
+                <h2 className="text-4xl font-bold gradient-text inline-block">
+                  Ready to Transform Your City?
+                </h2>
+                <p className="text-xl text-gray-300 mt-4">
+                  Contact our team to discuss how Bohenix can revolutionize your transportation infrastructure
+                </p>
+              </div>
+              
+              <div className="glass-effect rounded-xl p-8">
+                {submitted ? (
+                  <div className="text-center py-8">
+                    <div className="text-5xl mb-4">🎉</div>
+                    <h3 className="text-2xl font-bold text-white mb-2">Thank You!</h3>
+                    <p className="text-gray-300">Our team will contact you shortly.</p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                      <label htmlFor="name" className="block text-gray-300 mb-2">Name</label>
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-white"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="email" className="block text-gray-300 mb-2">Email</label>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-white"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="message" className="block text-gray-300 mb-2">Message</label>
+                      <textarea
+                        id="message"
+                        name="message"
+                        value={formData.message}
+                        onChange={handleChange}
+                        rows="5"
+                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-white"
+                        required
+                      ></textarea>
+                    </div>
+                    
+                    <button
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-primary to-secondary text-white px-6 py-4 rounded-lg font-semibold hover:shadow-lg transition-all"
+                    >
+                      Send Message
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ======================
+    // 7. Footer Component
+    // ======================
+    function Footer() {
+      return (
+        <footer className="bg-gray-900/80 py-12 border-t border-gray-800">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col md:flex-row justify-between items-center">
+              <div className="mb-6 md:mb-0">
+                <span className="text-2xl font-bold gradient-text">Bohenix</span>
+                <p className="text-gray-400 mt-2">Intelligent Road Networks for Africa</p>
+              </div>
+              
+              <div className="flex space-x-6">
+                <a href="https://twitter.com/bohenixsolutions" className="text-gray-400 hover:text-white transition-colors">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z" />
+                  </svg>
+                </a>
+                <a href="https://linkedin.com/company/bohenixsolutions" className="text-gray-400 hover:text-white transition-colors">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                  </svg>
+                </a>
+                <a href="https://facebook.com/bohenixsolutions" className="text-gray-400 hover:text-white transition-colors">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.234 2.686.234v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+            <div className="mt-8 text-center text-gray-400 text-sm">
+              <p>&copy; {new Date().getFullYear()} Bohenix Solutions. All rights reserved.</p>
+              <div className="flex justify-center space-x-4 mt-2">
+                <a href="#privacy" className="hover:text-white transition-colors">Privacy Policy</a>
+                <a href="#terms" className="hover:text-white transition-colors">Terms of Service</a>
+                <a href="#contact" className="hover:text-white transition-colors">Contact Us</a>
+              </div>
+            </div>
+          </div>
+        </footer>
+      );
+    }
+
+    // ======================
+    // 8. Main App Component
+    // ======================
+    function App() {
+      useParticles();
+      return (
+        <div>
+          <Navigation />
+          <HeroSection />
+          <TechnologyShowcase />
+          <LiveMap />
+          <ContactSection />
+          <Footer />
+        </div>
+      );
+    }
+
+    // Render the App
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
